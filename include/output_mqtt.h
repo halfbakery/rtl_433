@@ -13,7 +13,11 @@
 #define INCLUDE_OUTPUT_MQTT_H_
 
 #include "data.h"
+#include "pulse_detect.h"
 
 struct data_output *data_output_mqtt_create(char const *host, char const *port, char *opts, char const *dev_hint);
+
+const char *input_mqtt_rfraw_config(const char *topic);
+int input_mqtt_rfraw_read(pulse_data_t *data, uint32_t sample_rate);
 
 #endif /* INCLUDE_OUTPUT_MQTT_H_ */
