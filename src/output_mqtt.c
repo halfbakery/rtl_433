@@ -23,6 +23,8 @@
 
 /* MQTT client abstraction */
 
+typedef void (*mqtt_publish_cb)(const struct mg_str *topic, const struct mg_str *payload);
+
 typedef struct mqtt_client {
     struct mg_send_mqtt_handshake_opts opts;
     int prev_status;
@@ -30,6 +32,9 @@ typedef struct mqtt_client {
     char client_id[256];
     uint16_t message_id;
     int publish_flags; // MG_MQTT_RETAIN | MG_MQTT_QOS(0)
+    size_t num_subscriptions;
+    struct mg_mqtt_topic_expression *subscriptions;
+    mqtt_publish_cb *publish_callbacks;
 } mqtt_client_t;
 
 static void mqtt_client_event(struct mg_connection *nc, int ev, void *ev_data)
@@ -67,6 +72,7 @@ static void mqtt_client_event(struct mg_connection *nc, int ev, void *ev_data)
         }
         else {
             fprintf(stderr, "MQTT Connection established.\n");
+	    mg_mqtt_subscribe(nc, ctx->subscriptions, ctx->num_subscriptions, ++ctx->message_id);
         }
         break;
     case MG_EV_MQTT_PUBACK:
@@ -78,6 +84,12 @@ static void mqtt_client_event(struct mg_connection *nc, int ev, void *ev_data)
     case MG_EV_MQTT_PUBLISH: {
         fprintf(stderr, "MQTT Incoming message %.*s: %.*s\n", (int)msg->topic.len,
                 msg->topic.p, (int)msg->payload.len, msg->payload.p);
+	for (size_t i = 0; i < ctx->num_subscriptions; i++) {
+	    if (mg_mqtt_vmatch_topic_expression(ctx->subscriptions[i].topic, msg->topic)) {
+		if (ctx->publish_callbacks[i])
+		    ctx->publish_callbacks[i](&msg->topic, &msg->payload);
+	    }
+	}
         break;
     }
     case MG_EV_CLOSE:
@@ -144,8 +156,36 @@ static void mqtt_client_publish(struct mg_mgr *mgr, char const *topic, char cons
     }
 }
 
+static int mqtt_client_subscribe(struct mg_mgr *mgr, const char *topic, uint8_t qos, mqtt_publish_cb cb)
+{
+    mqtt_client_t *ctx = (mqtt_client_t *)mgr->user_data;
+
+    size_t i = ctx->num_subscriptions++;
+    ctx->subscriptions = realloc(ctx->subscriptions, ctx->num_subscriptions * sizeof(struct mg_mqtt_topic_expression));
+    ctx->publish_callbacks = realloc(ctx->publish_callbacks, ctx->num_subscriptions * sizeof(mqtt_publish_cb));
+    if (!ctx->subscriptions || !ctx->publish_callbacks) {
+	WARN_MALLOC("mqtt_client_subscribe()");
+	return -1;
+    }
+    ctx->subscriptions[i].topic = strdup(topic);
+    ctx->subscriptions[i].qos = qos;
+    ctx->publish_callbacks[i] = cb;
+
+    return 0;
+}
+
 static void mqtt_client_free(struct mg_mgr *mgr)
 {
+    mqtt_client_t *ctx = (mqtt_client_t *)mgr->user_data;
+
+    for (size_t i = 0; i < ctx->num_subscriptions; i++) {
+	free((char *) ctx->subscriptions[i].topic);
+    }
+    free(ctx->subscriptions);
+    free(ctx->publish_callbacks);
+    ctx->subscriptions = NULL;
+    ctx->publish_callbacks = NULL;
+
     free(mgr->user_data);
     mgr->user_data = NULL;
     mg_mgr_free(mgr);
