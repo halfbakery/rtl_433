@@ -1509,7 +1509,7 @@ int main(int argc, char **argv) {
     }
 
     // Special case for MQTT input
-    if (!strncasecmp(cfg->dev_query, "mqtt_rfraw:", 11)) {
+    if (cfg->dev_query && !strncasecmp(cfg->dev_query, "mqtt_rfraw:", 11)) {
 	const char *errmsg;
 
 	if ((errmsg = input_mqtt_rfraw_config(cfg->dev_query + 11)) != NULL) {
