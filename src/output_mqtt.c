@@ -623,7 +623,7 @@ static void rfraw_received(const struct mg_str *topic, const struct mg_str *payl
     if (!active_pulse)
 	return;
 
-    if (sscanf(payload->p, " { \"%*1[Rr]%*1[Ff]%*1[Rr]%*1[Aa]%*1[Ww]\" : { \"%*1[Dd]%*1[Aa]%*1[Tt]%*1[Aa]\" : \" %*1[Aa]%*1[Aa] %*1[Bb]1 %x %4095[0-9A-Fa-f ] \" } } %n", &bcount, buf, &n) != 2)
+    if (sscanf(payload->p, " { \"%*1[Tt]%*1[Ii]%*1[Mm]%*1[Ee]\" : \"%*[^\"]\" , \"%*1[Rr]%*1[Ff]%*1[Rr]%*1[Aa]%*1[Ww]\" : { \"%*1[Dd]%*1[Aa]%*1[Tt]%*1[Aa]\" : \" %*1[Aa]%*1[Aa] %*1[Bb]1 %x %4095[0-9A-Fa-f ] \" } } %n", &bcount, buf, &n) != 2)
 	return;
     if ((size_t) n != payload->len)
 	return;
