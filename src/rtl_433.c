@@ -1354,7 +1354,7 @@ int main(int argc, char **argv) {
                     fprintf(stderr, "Verifying test data with device %s.\n", r_dev->name);
                 if (rfraw_check(e)) {
                     pulse_data_t pulse_data = {0};
-                    rfraw_parse(&pulse_data, e);
+                    rfraw_parse(&pulse_data, e, cfg->samp_rate);
                     list_t single_dev = {0};
                     list_push(&single_dev, r_dev);
                     if (!pulse_data.fsk_f2_est)
@@ -1369,7 +1369,7 @@ int main(int argc, char **argv) {
             // otherwise test all decoders
             if (rfraw_check(line)) {
                 pulse_data_t pulse_data = {0};
-                rfraw_parse(&pulse_data, line);
+                rfraw_parse(&pulse_data, line, cfg->samp_rate);
                 if (!pulse_data.fsk_f2_est)
                     r += run_ook_demods(&demod->r_devs, &pulse_data);
                 else
@@ -1395,7 +1395,7 @@ int main(int argc, char **argv) {
         r = 0;
         if (rfraw_check(cfg->test_data)) {
             pulse_data_t pulse_data = {0};
-            rfraw_parse(&pulse_data, cfg->test_data);
+            rfraw_parse(&pulse_data, cfg->test_data, cfg->samp_rate);
             if (!pulse_data.fsk_f2_est)
                 r += run_ook_demods(&demod->r_devs, &pulse_data);
             else

@@ -138,7 +138,7 @@ void pulse_data_load(FILE *file, pulse_data_t *data, uint32_t sample_rate)
             }
         }
         if (rfraw_check(s)) {
-            rfraw_parse(data, s);
+            rfraw_parse(data, s, sample_rate);
             i = data->num_pulses;
             continue;
         }
