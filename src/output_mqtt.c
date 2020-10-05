@@ -163,11 +163,11 @@ static int mqtt_client_subscribe(struct mg_mgr *mgr, const char *topic, uint8_t 
 
     size_t i = ctx->num_subscriptions++;
     if (!(ctx->subscriptions = realloc(ctx->subscriptions, ctx->num_subscriptions * sizeof(struct mg_mqtt_topic_expression)))) {
-        WARN_MALLOC("mqtt_client_subscribe()");
+        WARN_REALLOC("mqtt_client_subscribe()");
         return -1;
     }
     if (!(ctx->publish_callbacks = realloc(ctx->publish_callbacks, ctx->num_subscriptions * sizeof(mqtt_publish_cb)))) {
-        WARN_MALLOC("mqtt_client_subscribe()");
+        WARN_REALLOC("mqtt_client_subscribe()");
         return -1;
     }
     ctx->subscriptions[i].topic = strdup(topic);
