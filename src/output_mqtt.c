@@ -173,6 +173,12 @@ static int mqtt_client_subscribe(struct mg_mgr *mgr, const char *topic, uint8_t 
         return -1;
     }
     ctx->subscriptions[i].topic = strdup(topic);
+    if (!ctx->subscriptions[i].topic)
+    {
+        WARN_STRDUP("mqtt_client_subscribe()");
+        ctx->num_subscriptions--;
+        return -1;
+    }
     ctx->subscriptions[i].qos = qos;
     ctx->publish_callbacks[i] = cb;
 
