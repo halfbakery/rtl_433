@@ -20,11 +20,13 @@ add_library(r_433 STATIC
     optparse.c
     output_influx.c
     output_mqtt.c
+    pulse_analyzer.c
     pulse_demod.c
     pulse_detect.c
     pulse_detect_fsk.c
     r_api.c
     r_util.c
+    rfraw.c
     samp_grab.c
     sdr.c
     term_ctl.c
@@ -140,6 +142,7 @@ add_library(r_433 STATIC
     devices/simplisafe.c
     devices/smoke_gs558.c
     devices/solight_te44.c
+    devices/somfy.c
     devices/springfield.c
     devices/steelmate.c
     devices/tfa_30_3196.c

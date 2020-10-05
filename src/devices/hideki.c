@@ -9,7 +9,7 @@
 */
 /**
 Hideki Temperature, Humidity, Wind, Rain sensor.
- 
+
 The received bits are inverted.
 
 Every 8 bits are stuffed with a (even) parity bit.
@@ -40,7 +40,8 @@ Rain:
 
 enum sensortypes { HIDEKI_UNKNOWN, HIDEKI_TEMP, HIDEKI_TS04, HIDEKI_WIND, HIDEKI_RAIN };
 
-static int hideki_ts04_callback(r_device *decoder, bitbuffer_t *bitbuffer) {
+static int hideki_ts04_callback(r_device *decoder, bitbuffer_t *bitbuffer)
+{
     data_t *data;
     uint8_t *b = bitbuffer->bb[0]; // TODO: handle the 3 row, need change in PULSE_CLOCK decoding
     uint8_t packet[HIDEKI_MAX_BYTES_PER_ROW];
@@ -155,7 +156,7 @@ static int hideki_ts04_callback(r_device *decoder, bitbuffer_t *bitbuffer) {
                 _X("wind_avg_mi_h","wind_speed_mph"),   "Wind Speed",       DATA_FORMAT, "%.02f mi/h", DATA_DOUBLE, wind_speed * 0.1f,
                 _X("wind_max_mi_h","gust_speed_mph"),   "Gust Speed",       DATA_FORMAT, "%.02f mi/h", DATA_DOUBLE, gust_speed * 0.1f,
                 "wind_approach",    "Wind Approach",    DATA_INT, wind_approach,
-                _X("wind_dir_deg","wind_direction"),   "Wind Direction",   DATA_FORMAT, "%.01f °", DATA_DOUBLE, wind_direction * 0.1f,
+                _X("wind_dir_deg","wind_direction"),   "Wind Direction",   DATA_FORMAT, "%.01f", DATA_DOUBLE, wind_direction * 0.1f,
                 "mic",              "Integrity",        DATA_STRING, "CRC",
                 NULL);
         decoder_output_data(decoder, data);
@@ -209,7 +210,7 @@ static char *output_fields[] = {
     "wind_dir_deg",
     "rain_mm",
     "mic",
-    NULL
+    NULL,
 };
 
 r_device hideki_ts04 = {

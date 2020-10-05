@@ -160,6 +160,9 @@
     <ClCompile Include="..\src\output_mqtt.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pulse_analyzer.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\pulse_demod.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -173,6 +176,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\r_util.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\rfraw.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\rtl_433.c">
@@ -524,6 +530,9 @@
       <Filter>Source Files\devices</Filter>
     </ClCompile>
     <ClCompile Include="..\src\devices\solight_te44.c">
+      <Filter>Source Files\devices</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\devices\somfy.c">
       <Filter>Source Files\devices</Filter>
     </ClCompile>
     <ClCompile Include="..\src\devices\springfield.c">
