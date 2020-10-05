@@ -14,6 +14,7 @@
 #include "optparse.h"
 #include "util.h"
 #include "fatal.h"
+#include "rfraw.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -613,87 +614,18 @@ static pulse_data_t *active_pulse = NULL;
 static void rfraw_received(const struct mg_str *topic, const struct mg_str *payload)
 {
     char buf[4096];
-    unsigned int bcount, x;
     int n = -1;
-    int buckets[8];
-    char *p, *start;
-    double to_sample;
-    bool hl_marking;
 
     if (!active_pulse)
 	return;
 
-    if (sscanf(payload->p, " { \"%*1[Tt]%*1[Ii]%*1[Mm]%*1[Ee]\" : \"%*[^\"]\" , \"%*1[Rr]%*1[Ff]%*1[Rr]%*1[Aa]%*1[Ww]\" : { \"%*1[Dd]%*1[Aa]%*1[Tt]%*1[Aa]\" : \" %*1[Aa]%*1[Aa] %*1[Bb]1 %x %4095[0-9A-Fa-f ] \" } } %n", &bcount, buf, &n) != 2)
+    if (sscanf(payload->p, " { \"%*1[Tt]%*1[Ii]%*1[Mm]%*1[Ee]\" : \"%*[^\"]\" , \"%*1[Rr]%*1[Ff]%*1[Rr]%*1[Aa]%*1[Ww]\" : { \"%*1[Dd]%*1[Aa]%*1[Tt]%*1[Aa]\" : \" %4095[0-9A-Fa-f ] \" } } %n", buf, &n) != 1)
 	return;
     if ((size_t) n != payload->len)
 	return;
-    if (bcount < 1 || bcount > 8)
-	return;
 
-    to_sample = active_pulse->sample_rate / 1e6;
-    p = strtok(buf, " \t\r\n");
-    for (size_t i = 0; i < bcount; i++) {
-	if (!p) return;
-	sscanf(p, "%x", &x);
-	buckets[i] = (int)(to_sample * x);
-	p = strtok(NULL, " \t\r\n");
-    }
-
-    if (!p)
-	return;
-    start = p;
-    p = strtok(NULL, " \t\r\n");
-    if (!p || strcmp(p, "55"))
-	return;
-    if (strtok(NULL, " \t\r\n"))
-	return;
-
-    hl_marking = false;
-    for (p = start; *p; p++) {
-	if (*p >= '8') {
-	    hl_marking = true;
-	    if (*p >= 'a')
-		*p -= 'a' - 'A';
-	}
-    }
-    if ((p - start + 1) / 2 > PD_MAX_PULSES)
-	return;
-
-    active_pulse->num_pulses = 0;
-    if (hl_marking) {
-	hl_marking = true;
-	active_pulse->pulse[0] = 0;
-	active_pulse->gap[0] = 0;
-	for (p = start; *p; p++) {
-	    if (hl_marking) {
-		if (*p < '8') {
-		    hl_marking = false;
-		    active_pulse->gap[active_pulse->num_pulses] = buckets[*p - '0'];
-		} else {
-		    active_pulse->pulse[active_pulse->num_pulses] += buckets[*p - (*p < 'A' ? '8' : 'A' - 2)];
-		}
-	    } else {
-		if (*p < '8') {
-		    active_pulse->gap[active_pulse->num_pulses] += buckets[*p - '0'];
-		} else {
-		    hl_marking = true;
-		    active_pulse->pulse[++active_pulse->num_pulses] = buckets[*p - (*p < 'A' ? '8' : 'A' - 2)];
-		    active_pulse->gap[active_pulse->num_pulses] = 0;
-		}
-	    }
-	}
-	active_pulse->num_pulses++;
-    } else {
-	for (p = start; p[0] && p[1]; p += 2) {
-	    active_pulse->pulse[active_pulse->num_pulses] = buckets[p[0] - '0'];
-	    active_pulse->gap[active_pulse->num_pulses] = buckets[p[1] - '0'];
-	    active_pulse->num_pulses++;
-	}
-	if (*p) {
-	    active_pulse->pulse[active_pulse->num_pulses] = buckets[*p - '0'];
-	    active_pulse->gap[active_pulse->num_pulses] = 0;
-	    active_pulse->num_pulses++;
-	}
+    if (!rfraw_parse(active_pulse, buf, active_pulse->sample_rate)) {
+	active_pulse->num_pulses = 0;
     }
 }
 
