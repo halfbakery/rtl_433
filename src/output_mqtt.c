@@ -634,7 +634,7 @@ static void rfraw_received(const struct mg_str *topic, const struct mg_str *payl
     if ((size_t) n != payload->len)
         return;
 
-    if (!rfraw_parse(active_pulse, buf, active_pulse->sample_rate)) {
+    if (!rfraw_parse(active_pulse, buf)) {
         active_pulse->num_pulses = 0;
     }
 }
@@ -649,13 +649,12 @@ const char *input_mqtt_rfraw_config(const char *topic)
     return NULL;
 }
 
-int input_mqtt_rfraw_read(pulse_data_t *data, uint32_t sample_rate)
+int input_mqtt_rfraw_read(pulse_data_t *data)
 {
     if (!active_mqtt)
         return 0;
 
     pulse_data_clear(data);
-    data->sample_rate = sample_rate;
     active_pulse = data;
 
     do {

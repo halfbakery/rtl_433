@@ -1570,7 +1570,7 @@ int main(int argc, char **argv) {
         demod->load_info.format = PULSE_OOK;
 
         fprintf(stderr, "MQTT RfRaw mode. Reading samples from topic: %s\n", cfg->dev_query + 11);
-        while (!cfg->do_exit && input_mqtt_rfraw_read(&demod->pulse_data, cfg->samp_rate)) {
+        while (!cfg->do_exit && input_mqtt_rfraw_read(&demod->pulse_data)) {
             demod->sample_file_pos = 0.0;
             if (!demod->pulse_data.num_pulses)
                 continue;
