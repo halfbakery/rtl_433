@@ -19,6 +19,6 @@
 bool rfraw_check(char const *p);
 
 /// Decode RfRaw string to pulse data.
-bool rfraw_parse(pulse_data_t *data, char const *p, uint32_t sample_rate);
+bool rfraw_parse(pulse_data_t *data, char const *p);
 
 #endif /* INCLUDE_RFRAW_H_ */

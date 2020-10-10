@@ -89,10 +89,8 @@ bool rfraw_check(char const *p)
 */
 }
 
-static bool parse_rfraw(pulse_data_t *data, char const **p, uint32_t sample_rate)
+static bool parse_rfraw(pulse_data_t *data, char const **p)
 {
-    double to_sample = sample_rate / 1e6;
-
     if (!p || !*p || !**p) return false;
 
     int hdr = hexstr_get_byte(p);
@@ -116,7 +114,7 @@ static bool parse_rfraw(pulse_data_t *data, char const **p, uint32_t sample_rate
 
     int bins[8] = {0};
     for (int i = 0; i < bins_len; ++i) {
-        bins[i] = (int)(to_sample * hexstr_get_word(p));
+        bins[i] = hexstr_get_word(p);
     }
 
     unsigned prev_pulses = data->num_pulses;
@@ -158,11 +156,11 @@ static bool parse_rfraw(pulse_data_t *data, char const **p, uint32_t sample_rate
     }
     //pulse_data_print(data);
 
-    data->sample_rate = sample_rate;
+    data->sample_rate = 1000000; // us
     return true;
 }
 
-bool rfraw_parse(pulse_data_t *data, char const *p, uint32_t sample_rate)
+bool rfraw_parse(pulse_data_t *data, char const *p)
 {
     if (!p || !*p)
         return false;
@@ -175,7 +173,7 @@ bool rfraw_parse(pulse_data_t *data, char const *p, uint32_t sample_rate)
         while (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n' || *p == '+' || *p == '-')
             ++p;
 
-        if (!parse_rfraw(data, &p, sample_rate))
+        if (!parse_rfraw(data, &p))
             break;
     }
     //pulse_data_print(data);
