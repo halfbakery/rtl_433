@@ -100,7 +100,7 @@ static void usage(int exit_code)
             "       -v : verbose, -vv : verbose decoders, -vvv : debug decoders, -vvvv : trace decoding).\n"
             "  [-c <path>] Read config options from a file\n"
             "\t\t= Tuner options =\n"
-            "  [-d <RTL-SDR USB device index> | :<RTL-SDR USB device serial> | <SoapySDR device query> | rtl_tcp | mqtt_rfraw help]\n"
+            "  [-d <RTL-SDR USB device index> | :<RTL-SDR USB device serial> | <SoapySDR device query> | rtl_tcp | help]\n"
             "  [-g <gain> | help] (default: auto)\n"
             "  [-t <settings>] apply a list of keyword=value settings for SoapySDR devices\n"
             "       e.g. -t \"antenna=A,bandwidth=4.5M,rfnotch_ctrl=false\"\n"
@@ -182,8 +182,7 @@ static void help_device(void)
             "  [-d driver=rtlsdr] Open e.g. specific SoapySDR device\n"
             "\tTo set gain for SoapySDR use -g ELEM=val,ELEM=val,... e.g. -g LNA=20,TIA=8,PGA=2 (for LimeSDR).\n"
             "  [-d rtl_tcp[:[//]host[:port]] (default: localhost:1234)\n"
-            "\tSpecify host/port to connect to with e.g. -d rtl_tcp:127.0.0.1:1234\n"
-            "  [-d mqtt_rfraw:topic] Read bucket sniffing data from Portisch firmware enabled Sonoff RF-Bridge devices\n");
+            "\tSpecify host/port to connect to with e.g. -d rtl_tcp:127.0.0.1:1234\n");
     exit(0);
 }
 
@@ -1426,15 +1425,26 @@ int main(int argc, char **argv) {
         for (void **iter = cfg->in_files.elems; iter && *iter; ++iter) {
             cfg->in_filename = *iter;
 
-            parse_file_info(cfg->in_filename, &demod->load_info);
-            if (strcmp(demod->load_info.path, "-") == 0) { /* read samples from stdin */
-                in_file = stdin;
-                cfg->in_filename = "<stdin>";
+            if (strncmp(cfg->in_filename, "mqtt/rfraw:", 11) == 0) {
+                const char *errmsg;
+
+                if ((errmsg = input_mqtt_rfraw_config(cfg->in_filename + 11)) != NULL) {
+                    fprintf(stderr, "%s\n", errmsg);
+                    exit(1);
+                }
+                demod->load_info.format = PULSE_OOK;
+                in_file = NULL;
             } else {
-                in_file = fopen(demod->load_info.path, "rb");
-                if (!in_file) {
-                    fprintf(stderr, "Opening file: %s failed!\n", cfg->in_filename);
-                    break;
+                parse_file_info(cfg->in_filename, &demod->load_info);
+                if (strcmp(demod->load_info.path, "-") == 0) { /* read samples from stdin */
+                    in_file = stdin;
+                    cfg->in_filename = "<stdin>";
+                } else {
+                    in_file = fopen(demod->load_info.path, "rb");
+                    if (!in_file) {
+                        fprintf(stderr, "Opening file: %s failed!\n", cfg->in_filename);
+                        break;
+                    }
                 }
             }
             fprintf(stderr, "Test mode active. Reading samples from file: %s\n", cfg->in_filename);  // Essential information (not quiet)
@@ -1459,7 +1469,12 @@ int main(int argc, char **argv) {
             // special case for pulse data file-inputs
             if (demod->load_info.format == PULSE_OOK) {
                 while (!cfg->do_exit) {
-                    pulse_data_load(in_file, &demod->pulse_data, cfg->samp_rate);
+                    if (in_file)
+                        pulse_data_load(in_file, &demod->pulse_data, cfg->samp_rate);
+                    else {
+                        if (!input_mqtt_rfraw_read(&demod->pulse_data))
+                            break;
+                    }
                     if (!demod->pulse_data.num_pulses)
                         break;
 
@@ -1549,57 +1564,6 @@ int main(int argc, char **argv) {
         close_dumpers(cfg);
         free(test_mode_buf);
         free(test_mode_float_buf);
-        r_free_cfg(cfg);
-        exit(0);
-    }
-
-    // Special case for MQTT input
-    if (cfg->dev_query && !strncasecmp(cfg->dev_query, "mqtt_rfraw:", 11)) {
-        const char *errmsg;
-
-        if ((errmsg = input_mqtt_rfraw_config(cfg->dev_query + 11)) != NULL) {
-            fprintf(stderr, "%s\n", errmsg);
-            exit(1);
-        }
-
-        if (cfg->duration > 0) {
-            time(&cfg->stop_time);
-            cfg->stop_time += cfg->duration;
-        }
-
-        demod->load_info.format = PULSE_OOK;
-
-        fprintf(stderr, "MQTT RfRaw mode. Reading samples from topic: %s\n", cfg->dev_query + 11);
-        while (!cfg->do_exit && input_mqtt_rfraw_read(&demod->pulse_data)) {
-            demod->sample_file_pos = 0.0;
-            if (!demod->pulse_data.num_pulses)
-                continue;
-
-            for (void **iter2 = demod->dumper.elems; iter2 && *iter2; ++iter2) {
-                file_info_t const *dumper = *iter2;
-                if (dumper->format == VCD_LOGIC) {
-                    pulse_data_print_vcd(dumper->file, &demod->pulse_data, '\'');
-                } else if (dumper->format == PULSE_OOK) {
-                    pulse_data_dump(dumper->file, &demod->pulse_data);
-                } else {
-                    fprintf(stderr, "Dumper (%s) not supported on OOK input\n", dumper->spec);
-                    exit(1);
-                }
-            }
-
-            if (demod->pulse_data.fsk_f2_est) {
-                run_fsk_demods(&demod->r_devs, &demod->pulse_data);
-            }
-            else {
-                int p_events = run_ook_demods(&demod->r_devs, &demod->pulse_data);
-                if (cfg->verbosity > 2)
-                    pulse_data_print(&demod->pulse_data);
-                if (demod->analyze_pulses && (cfg->grab_mode <= 1 || (cfg->grab_mode == 2 && p_events == 0) || (cfg->grab_mode == 3 && p_events > 0))) {
-                    pulse_analyzer(&demod->pulse_data, PULSE_DATA_OOK);
-                }
-            }
-        }
-
         r_free_cfg(cfg);
         exit(0);
     }
